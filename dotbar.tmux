@@ -20,6 +20,7 @@ fg=$(get_tmux_option "@tmux-dotbar-fg" '#475266')
 fg_current=$(get_tmux_option "@tmux-dotbar-fg-current" '#BFBDB6')
 fg_session=$(get_tmux_option "@tmux-dotbar-fg-session" '#565B66')
 fg_prefix=$(get_tmux_option "@tmux-dotbar-fg-prefix" '#95E6CB')
+fg_number=$(get_tmux_option "@tmux-dotbar-fg-number" "${fg}")
 
 # bold options
 bold_status=$(get_tmux_option "@tmux-dotbar-bold-status" false)
@@ -38,7 +39,7 @@ else
 fi
 
 right_state=$(get_tmux_option "@tmux-dotbar-right" false)
-status_right=$("$right_state" && get_tmux_option "@tmux-dotbar-status-right" "#[bg=$bg,fg=$fg_session] %H:%M #[bg=$bg,fg=${fg_session}]")
+status_right=$("$right_state" && get_tmux_option "@tmux-dotbar-status-right" "#[bg=$bg,fg=$fg_session]  %H:%M #[bg=$bg,fg=${fg_session}]")
 
 base_window_format=$(get_tmux_option "@tmux-dotbar-window-status-format" ' #W ')
 
@@ -80,15 +81,18 @@ tmux set-option -g status-right "$status_right"
 tmux set-window-option -g window-status-separator "$window_status_separator"
 
 tmux set-option -g window-status-style "bg=${bg},fg=${fg}"
-tmux set-option -g window-status-format "$window_status_format"
-"$show_maximized_icon_for_all_tabs" && tmux set-option -g window-status-format "${window_status_format}#{?window_zoomed_flag,${maximized_pane_icon},}"
+tmux set-option -g window-status-format " #{?#{==:#{@ai-status},done},#[fg=#00cc66],#{?#{==:#{@ai-status},waiting},#[fg=#ff8c00],#[fg=${fg_number}]}}#I#[fg=${fg}]${window_status_format}"
+"$show_maximized_icon_for_all_tabs" && tmux set-option -g window-status-format " #{?#{==:#{@ai-status},done},#[fg=#00cc66],#{?#{==:#{@ai-status},waiting},#[fg=#ff8c00],#[fg=${fg_number}]}}#I#[fg=${fg}]${window_status_format}#{?window_zoomed_flag,${maximized_pane_icon},}"
 
 # Set bell and activity styles that work with the theme
 tmux set-option -g window-status-bell-style "bg=${fg_prefix},fg=${bg},bold"
 tmux set-option -g window-status-activity-style "bg=${fg_current},fg=${bg}"
 
 if [ "$bold_current_window" = true ]; then
-  tmux set-option -g window-status-current-format "#[bg=${bg},fg=${fg_current},bold]${window_status_format}#[fg=#39BAE6,bg=${bg}]#{?window_zoomed_flag,${maximized_pane_icon},}#[fg=${bg},bg=default]"
+  tmux set-option -g window-status-current-format " #[bg=${bg}]#{?#{==:#{@ai-status},done},#[fg=#00cc66],#{?#{==:#{@ai-status},waiting},#[fg=#ff8c00],#[fg=#39BAE6]}}${maximized_pane_icon}#[fg=${fg_current},bold]${window_status_format}#[fg=${bg},bg=default]"
 else
-  tmux set-option -g window-status-current-format "#[bg=${bg},fg=${fg_current}]${window_status_format}#[fg=#39BAE6,bg=${bg}]#{?window_zoomed_flag,${maximized_pane_icon},}#[fg=${bg},bg=default]"
+  tmux set-option -g window-status-current-format " #[bg=${bg}]#{?#{==:#{@ai-status},done},#[fg=#00cc66],#{?#{==:#{@ai-status},waiting},#[fg=#ff8c00],#[fg=#39BAE6]}}${maximized_pane_icon}#[fg=${fg_current}]${window_status_format}#[fg=${bg},bg=default]"
 fi
+
+# Clear done/waiting status when switching to a tab
+tmux set-hook -g after-select-window "run-shell '~/.tmux/bin/ai-status focus #{window_id}'"
